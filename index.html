@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP_Key_Prüfer</title>
+    <style>
+        /* Grundlegendes Layout */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Vollbild Pop-up */
+        #welcomePopup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            color: #39b54a;
+            font-family: 'Arial', sans-serif;
+            font-size: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 9999;
+        }
+
+        /* Container des Inhalts */
+        #verifyBox {
+            background: #2c2f38;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            display: none;
+        }
+
+        /* Überschrift und Textstil */
+        h1 {
+            font-size: 32px;
+            color: #39b54a;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        /* Eingabefeld (leicht nach links verschoben) */
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-top: 15px;
+            font-size: 16px;
+            border: 2px solid #39b54a;
+            border-radius: 8px;
+            background: #353c44;
+            color: white;
+            text-align: center;
+            margin-left: -10px; /* Verschiebung nach links */
+            display: block;
+        }
+
+        /* Buttons */
+        button {
+            padding: 14px 20px;
+            margin-top: 20px;
+            font-size: 16px;
+            background-color: #39b54a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #1dbf73;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Nachricht */
+        .verified {
+            font-size: 20px;
+            font-weight: bold;
+            color: #66ff66;
+            margin-top: 10px;
+        }
+
+        .error {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff4d4d;
+            margin-top: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 500px) {
+            #verifyBox {
+                padding: 30px;
+                width: 90%;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 22px;
+            }
+
+            input {
+                margin-left: -5px; /* Auf kleineren Geräten weniger verschieben */
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Vollbild Pop-up -->
+    <div id="welcomePopup">
+        WILLKOMMEN BEI VIP_HÄCKED
+    </div>
+
+    <!-- Inhalt der Seite (wird nach dem Pop-up sichtbar) -->
+    <div id="verifyBox">
+        <h1>VIP_Häcked Key Prüfer</h1>
+        <h2>Gib deinen Key ein</h2>
+        <input type="text" id="keyInput" placeholder="Key eingeben..." oninput="resetMessage()">
+        <button onclick="checkKey()">Prüfen</button>
+        <p id="message" class="hidden"></p>
+        <button id="nextBtn" class="hidden" onclick="redirectToDiscord()">Ich bin mit dem Screenshot fertig</button>
+    </div>
+
+    <script>
+        // Funktion zum Schließen des Pop-ups nach 3 Sekunden
+        function closePopup() {
+            const popup = document.getElementById("welcomePopup");
+            popup.style.display = "none"; // Popup ausblenden
+            document.body.style.overflow = "auto"; // Körper-Overflow zurücksetzen
+            document.getElementById("verifyBox").style.display = "block"; // Inhalt sichtbar machen
+        }
+
+        // Pop-up nach 3 Sekunden automatisch schließen
+        window.onload = function() {
+            setTimeout(closePopup, 3000);
+        };
+
+        // Funktion zum Überprüfen des Keys
+        function checkKey() {
+            const key = document.getElementById("keyInput").value;
+            const message = document.getElementById("message");
+            const nextBtn = document.getElementById("nextBtn");
+
+            // Hole den aktuellen Key vom Server
+            fetch('http://localhost:3000/get-key')
+                .then(response => response.json())
+                .then(data => {
+                    const currentKey = data.key; // Der vom Server gesendete Key
+
+                    // Überprüfen, ob der eingegebene Key mit dem aktuellen Key übereinstimmt
+                    if (key === currentKey) {
+                        message.textContent = "✅ Der Key ist richtig!";
+                        message.classList.remove("hidden", "error");
+                        message.classList.add("verified");
+                        nextBtn.classList.remove("hidden");
+
+                        // Anfrage an den Server, um den Webhook auszulösen
+                        fetch('/verify-key', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ key: key })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                console.log("Webhook erfolgreich gesendet!");
+                            } else {
+                                console.error("Fehler beim Senden des Webhooks.");
+                            }
+                        })
+                        .catch(err => console.error("Fehler bei der Anfrage:", err));
+
+                    } else {
+                        message.textContent = "❌ Key ist leider falsch. Versuche es später erneut oder wende dich an den Support.";
+                        message.classList.remove("hidden", "verified");
+                        message.classList.add("error");
+                        nextBtn.classList.add("hidden");
+                    }
+                })
+                .catch(err => {
+                    console.error("Fehler beim Abrufen des aktuellen Keys:", err);
+                    message.textContent = "❌ Es gab ein Problem beim Abrufen des aktuellen Keys.";
+                    message.classList.remove("hidden", "verified");
+                    message.classList.add("error");
+                    nextBtn.classList.add("hidden");
+                });
+        }
+
+        // Funktion zum Zurücksetzen der Nachricht
+        function resetMessage() {
+            document.getElementById("message").classList.add("hidden");
+            document.getElementById("nextBtn").classList.add("hidden");
+        }
+
+        // Funktion zum Weiterleiten auf Discord
+        function redirectToDiscord() {
+            window.location.href = "https://discord.gg/VqZHZVhPUW";
+        }
+    </script>
+</body>
+</html>
